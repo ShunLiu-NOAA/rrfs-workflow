@@ -25,7 +25,8 @@ if [ "$L_MACHINE" != wcoss2 ]; then
 fi
 
 if [ "$L_MACHINE" = wcoss2 ]; then
-   module reset
+   #module reset
+   module purge
 else
    module purge
 fi
