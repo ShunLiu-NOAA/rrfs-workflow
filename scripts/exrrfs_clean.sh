@@ -52,7 +52,8 @@ cd $DATAROOT
 if [ ${KEEPDATA} == "YES" ]; then
   # Keep all unique id DATA and rename the Umbrella Data directory to ensure new job will not run on the same directory
   for dir_remove in rrfs_analysis_gsi rrfs_analysis_gsi_spinup rrfs_calc_ensmean rrfs_forecast_spinup rrfs_init rrfs_init_spinup; do
-    [[ -d ${dir_remove}_${cyc}_v1.0 ]]&& mv ${dir_remove}_${cyc}_v1.0 ${dir_remove}_$$_${cyc}_v1.0
+    #[[ -d ${dir_remove}_${cyc}_v1.0 ]]&& mv ${dir_remove}_${cyc}_v1.0 ${dir_remove}_$$_${cyc}_v1.0
+    [[ -d ${dir_remove}_${target_cleanup_cyc}_v1.0 ]]&& mv ${dir_remove}_${target_cleanup_cyc}_v1.0 ${dir_remove}_$$_${target_cleanup_cyc}_v1.0
   done
 else
   # Delete all unique id DATA for this cycle
@@ -110,7 +111,9 @@ search_cyc_10=$($NDATE -10 ${CDATE} | cut -c9-10)
 search_cyc_09=$($NDATE -9 ${CDATE} | cut -c9-10)
 for idx_cyc in ${search_cyc_18#0} ${search_cyc_17#0} ${search_cyc_16#0} ${search_cyc_15#0} ${search_cyc_14#0} ${search_cyc_13#0} ${search_cyc_12#0} ${search_cyc_11#0} ${search_cyc_10#0} ${search_cyc_09#0}; do
   idx_cyc2d=$( printf "%02d" "${idx_cyc#0}" )
-  fcst_state=$(ecflow_client --query state /nco_rrfs_dev_${idx_cyc2d}/primary/${idx_cyc2d}/rrfs/v1.0/forecast)
+  g_cyc_tmp=$(( (10#$idx_cyc / 6) * 6 ))
+  g_cyc=$(printf "%02d" $g_cyc_tmp)
+  fcst_state=$(ecflow_client --query state /emc_rrfs_dev/primary/${g_cyc}/rrfs/v1.0/${idx_cyc2d}/forecast)
 
   #### Temporary keep all 13Z for debug
   # if [ ${idx_cyc2d} == 19 ] || [ ${idx_cyc2d} == 12 ]; then
