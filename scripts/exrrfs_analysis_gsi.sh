@@ -1157,6 +1157,7 @@ fi # run diag inline (with GSI)
 #-----------------------------------------------------------------------
 #
 filelist="pe*.nc4 rrfs.*.${YYYYMMDDHH}_cnvstat_nc rrfs.*.${YYYYMMDDHH}_radstat_nc satbias_out satbias_pc.out"
+rm -f  ${shared_output_data}/link_shared_file.sh
 for file in $filelist; do
   if [ -s $file ]; then
     [[ -f ${shared_output_data}/${file} ]]&& rm -f ${shared_output_data}/${file}
