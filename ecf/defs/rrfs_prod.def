@@ -1,7 +1,8 @@
-suite rrfs_dev
+suite emc_rrfs_dev
+  clock real 21.08.2025 15:35 -04:00
   family primary
     edit rrfs_ver 'v1.0'
-    edit PACKAGEHOME '/lfs/h2/emc/lam/noscrub/%EMC_USER%/rrfs/para/packages/rrfs.%rrfs_ver%'
+    edit PACKAGEHOME '/lfs/h2/emc/lam/noscrub/emc.lam/rrfs/ecflow/rrfs-workflow'
     edit NET 'rrfs'
     edit RUN 'rrfs'
     edit PROJ 'RRFS'
@@ -10,7 +11,7 @@ suite rrfs_dev
     edit ENVIR 'prod'
     edit QUEUE 'devhigh'
     edit QUEUE_ARCH 'dev_transfer'
-    edit OUTPUTDIR '/lfs/h3/emc/eib/noscrub/ptmp/%EMC_USER%/ecflow_rrfs/para/output/prod/today'
+    edit OUTPUTDIR '/lfs/f2/t2o/ptmp/emc/Shun.Liu/output/prod/today'
     family 00
       family rrfs
         family v1.0
@@ -2074,7 +2075,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 trigger ../ics/det==complete
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 0020 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -6070,7 +6071,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 00
           family 01
@@ -6217,7 +6218,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 edit CYCLE_TYPE 'prod'
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 0120 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -7074,7 +7075,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 01
           family 02
@@ -7221,7 +7222,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 edit CYCLE_TYPE 'prod'
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 0220 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -8078,7 +8079,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 02
           family 03
@@ -8249,7 +8250,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 task jrrfs_det_prep_cyc
                   edit CYCLE_TYPE 'prod'
-                  trigger :TIME >= 0320 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
                 task jrrfs_det_prep_cyc_spinup
                   edit CYCLE_TYPE 'spinup'
                   trigger ../../ics/det==complete
@@ -9133,7 +9134,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 03
           family 04
@@ -9295,10 +9296,10 @@ suite rrfs_dev
                 edit WGF 'det'
                 task jrrfs_det_prep_cyc
                   edit CYCLE_TYPE 'prod'
-                  trigger :TIME >= 0420 and ../../../03/forecast/det/jrrfs_det_save_restart_f1==complete
+                  trigger ../../../03/forecast/det/jrrfs_det_save_restart_f1==complete
                 task jrrfs_det_prep_cyc_spinup
                   edit CYCLE_TYPE 'spinup'
-                  trigger :TIME >= 0420 and ../../../03/forecast/det/jrrfs_det_save_restart_spinup_f001==complete
+                  trigger ../../../03/forecast/det/jrrfs_det_save_restart_spinup_f001==complete
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -10179,7 +10180,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 04
           family 05
@@ -11225,7 +11226,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 05
           task cycle_end
@@ -17341,7 +17342,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 06
           family 07
@@ -17438,10 +17439,10 @@ suite rrfs_dev
                   trigger :TIME >= 0735 and :TIME < 0810
                 task jrrfs_det_process_radar
                   edit CYCLE_TYPE 'prod'
-                  trigger :TIME >= 0725 and :TIME < 0805
+                  trigger :TIME >= 0715 and :TIME < 0805
                 task jrrfs_det_process_lightning
                   edit CYCLE_TYPE 'prod'
-                  trigger :TIME >= 0715 and :TIME < 0805
+                  trigger :TIME >= 0725 and :TIME < 0805
                 task jrrfs_det_process_bufr
                   edit CYCLE_TYPE 'prod'
                   trigger :TIME >= 0735 and :TIME < 0805
@@ -18817,7 +18818,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 07
           family 08
@@ -19863,7 +19864,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 08
           family 09
@@ -20013,7 +20014,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 edit CYCLE_TYPE 'prod'
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 0920 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -20870,7 +20871,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 09
           family 10
@@ -21017,7 +21018,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 edit CYCLE_TYPE 'prod'
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 1020 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -21874,7 +21875,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 10
           family 11
@@ -22021,7 +22022,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 edit CYCLE_TYPE 'prod'
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 1120 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -22878,7 +22879,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 11
           task cycle_end
@@ -28948,7 +28949,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 12
           family 13
@@ -29095,7 +29096,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 edit CYCLE_TYPE 'prod'
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 1320 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -29952,7 +29953,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 13
           family 14
@@ -30099,7 +30100,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 edit CYCLE_TYPE 'prod'
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 1420 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -30956,7 +30957,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 14
           family 15
@@ -31127,7 +31128,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 task jrrfs_det_prep_cyc
                   edit CYCLE_TYPE 'prod'
-                  trigger :TIME >= 1520 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
                 task jrrfs_det_prep_cyc_spinup
                   edit CYCLE_TYPE 'spinup'
                   trigger ../../ics/det==complete
@@ -32011,7 +32012,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 15
           family 16
@@ -32174,7 +32175,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 task jrrfs_det_prep_cyc
                   edit CYCLE_TYPE 'prod'
-                  trigger :TIME >= 1620 and ../../fsm/jrrfs_fsm:release_det_prep_cyc and ../../../15/forecast/det/jrrfs_det_save_restart_f1==complete
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
                 task jrrfs_det_prep_cyc_spinup
                   edit CYCLE_TYPE 'spinup'
                   trigger :TIME >= 1620 and ../../../15/forecast/det/jrrfs_det_save_restart_spinup_f001==complete
@@ -33058,7 +33059,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 16
           family 17
@@ -33221,7 +33222,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 task jrrfs_det_prep_cyc
                   edit CYCLE_TYPE 'prod'
-                  trigger :TIME >= 1720 and ../../fsm/jrrfs_fsm:release_det_prep_cyc and ../../../16/forecast/det/jrrfs_det_save_restart_f1==complete
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
                 task jrrfs_det_prep_cyc_spinup
                   edit CYCLE_TYPE 'spinup'
                   trigger :TIME >= 1720 and ../../../16/forecast/det/jrrfs_det_save_restart_spinup_f001==complete
@@ -34105,7 +34106,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 17
           task cycle_end 
@@ -40222,7 +40223,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 18
           family 19
@@ -41698,7 +41699,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 19
           family 20
@@ -41861,7 +41862,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 task jrrfs_det_prep_cyc
                   edit CYCLE_TYPE 'prod'
-                  trigger :TIME >= 2020 and ../../fsm/jrrfs_fsm:release_det_prep_cyc and ../../../19/forecast/det/jrrfs_det_save_restart_f1==complete
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
                 task jrrfs_det_prep_cyc_spinup
                   edit CYCLE_TYPE 'spinup'
                   trigger :TIME >= 2020 and ../../../19/forecast/det/jrrfs_det_save_restart_spinup_f001==complete
@@ -42745,7 +42746,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 20
           family 21
@@ -42892,7 +42893,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 edit CYCLE_TYPE 'prod'
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 2120 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -43749,7 +43750,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 21
           family 22
@@ -43896,7 +43897,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 edit CYCLE_TYPE 'prod'
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 2220 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -44753,7 +44754,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 22
           family 23
@@ -44900,7 +44901,7 @@ suite rrfs_dev
                 edit WGF 'det'
                 edit CYCLE_TYPE 'prod'
                 task jrrfs_det_prep_cyc
-                  trigger :TIME >= 2320 and ../../fsm/jrrfs_fsm:release_det_prep_cyc
+                trigger ../../fsm/jrrfs_fsm:release_det_prep_cyc
               endfamily   # det
               family enkf
                 edit WGF 'enkf'
@@ -45757,7 +45758,7 @@ suite rrfs_dev
             family clean
               task jrrfs_clean
                 label storage ""
-                trigger ../fsm==complete and ../forecast==complete and ../post==complete and ../product==complete
+                trigger ../analysis==complete
             endfamily     # clean
           endfamily       # 23
           task cycle_end 
