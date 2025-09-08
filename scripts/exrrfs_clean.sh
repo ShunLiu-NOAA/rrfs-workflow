@@ -113,7 +113,8 @@ for idx_cyc in ${search_cyc_18#0} ${search_cyc_17#0} ${search_cyc_16#0} ${search
   idx_cyc2d=$( printf "%02d" "${idx_cyc#0}" )
   g_cyc_tmp=$(( (10#$idx_cyc / 6) * 6 ))
   g_cyc=$(printf "%02d" $g_cyc_tmp)
-  fcst_state=$(ecflow_client --query state /emc_rrfs_dev/primary/${g_cyc}/rrfs/v1.0/${idx_cyc2d}/forecast)
+  #fcst_state=$(ecflow_client --query state /emc_rrfs_dev/primary/${g_cyc}/rrfs/v1.0/${idx_cyc2d}/forecast)
+  fcst_state=$(ecflow_client --query state /emc_rrfs_dev/primary/${g_cyc}/rrfs/v1.0/${idx_cyc2d}/analysis)
 
   #### Temporary keep all 13Z for debug
   # if [ ${idx_cyc2d} == 19 ] || [ ${idx_cyc2d} == 12 ]; then
