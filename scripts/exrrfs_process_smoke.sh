@@ -64,7 +64,7 @@ for i in $(seq 0 24); do
       ${LN} -sf ${rave_day_dir}/${intp_fname} ${DATA}/${intp_fname}
       echo "${rave_day_dir}/${intp_fname} interpolated file available to reuse"
    else
-       echo "WARNING: ${rave_day_dir}/${intp_fname} interpolated file not available to reuse" 
+      echo "WARNING: ${rave_day_dir}/${intp_fname} interpolated file not available to reuse" 
    fi
 done
 
@@ -81,9 +81,9 @@ if [ -d "${FIRE_RAVE_DIR}/${PDYm1}/rave" ]; then
        files=( "${dir}"/RAVE-HrlyEmiss-3km_* )
        if [ -e "${files[0]}" ]; then
             ${LN} -snf "${dir}"/RAVE-HrlyEmiss-3km_* "${fire_rave_dir_work}/."
-        else
+       else
             echo "WARNING: No RAVE files found for ${day} in ${dir}"
-        fi
+       fi
     done   
 else
    fire_rave_dir_work=${FIRE_RAVE_DIR}
