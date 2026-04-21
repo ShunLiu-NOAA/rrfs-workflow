@@ -64,7 +64,7 @@ for i in $(seq 0 24); do
       ${LN} -sf ${rave_day_dir}/${intp_fname} ${DATA}/${intp_fname}
       echo "${rave_day_dir}/${intp_fname} interpolated file available to reuse"
    else
-      echo "${rave_day_dir}/${intp_fname} interpolated file not available to reuse"  
+       echo "WARNING: ${rave_day_dir}/${intp_fname} interpolated file not available to reuse" 
    fi
 done
 
@@ -74,11 +74,17 @@ done
 #
 #-----------------------------------------------------------------------
 
-if [ -d ${FIRE_RAVE_DIR}/${PDYm1}/rave ]; then
+if [ -d "${FIRE_RAVE_DIR}/${PDYm1}/rave" ]; then
    fire_rave_dir_work=${DATA}
-   ${LN} -snf ${FIRE_RAVE_DIR}/${PDY}/rave/RAVE-HrlyEmiss-3km_* ${fire_rave_dir_work}/.
-   ${LN} -snf ${FIRE_RAVE_DIR}/${PDYm1}/rave/RAVE-HrlyEmiss-3km_* ${fire_rave_dir_work}/.
-   ${LN} -snf ${FIRE_RAVE_DIR}/${PDYm2}/rave/RAVE-HrlyEmiss-3km_* ${fire_rave_dir_work}/.
+   for day in "${PDY}" "${PDYm1}" "${PDYm2}"; do
+       dir="${FIRE_RAVE_DIR}/${day}/rave"
+       files=( "${dir}"/RAVE-HrlyEmiss-3km_* )
+       if [ -e "${files[0]}" ]; then
+            ${LN} -snf "${dir}"/RAVE-HrlyEmiss-3km_* "${fire_rave_dir_work}/."
+        else
+            echo "WARNING: No RAVE files found for ${day} in ${dir}"
+        fi
+    done   
 else
    fire_rave_dir_work=${FIRE_RAVE_DIR}
 fi
@@ -100,8 +106,14 @@ export err=$?; err_chk
 
 #Copy the the hourly, interpolated RAVE data to $rave_dir so it
 # is maintained there for future cycles.
+smoke_warned=0
 for file in ${DATA}/RAVE-HrlyEmiss-* ${DATA}/RRFS_NA_3km_intp_* ${DATA}/SMOKE_RRFS_data_*
 do
+   if [ "$file" = "${DATA}/SMOKE_RRFS_data_*" ] && [ "$smoke_warned" -eq 0 ]; then
+      echo "WARNING: No SMOKE_RRFS_data_* file found in ${DATA}"
+      smoke_warned=1
+      continue
+   fi	
    filename=$(basename "$file")
    daystr=$(echo "$filename" | grep -o '[0-9]\{8\}' | head -1)
    [ -z "$daystr" ] && continue
