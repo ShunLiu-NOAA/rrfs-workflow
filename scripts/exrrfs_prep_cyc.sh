@@ -3,6 +3,11 @@ set -x
 
 source ${FIXrrfs}/workflow/${WGF}/workflow.conf
 
+# The restart written one time step after initialization is named by its valid time, so DT_ATMOS
+# has to carry into minutes: "00${DT_ATMOS}" is only correct while the step is under 60 s. Gives
+# 0036 for the 36 s NA step, exactly as before, and 0115 for a 75 s step rather than an invalid 0075.
+dt_mmss=$( printf "%02d%02d" $(( ${DT_ATMOS:-36} / 60 )) $(( ${DT_ATMOS:-36} % 60 )) )
+
 export FIXam=${FIXam:-${HOMErrfs}/fix/am}
 export FIXLAM=${FIXLAM:-${HOMErrfs}/fix/lam/RRFS_NA_3km}
 export FIX_GSI="${FIXrrfs}/gsi"
@@ -57,6 +62,10 @@ case $MACHINE in
   "WCOSS2")
     ncores=$(( NNODES_PREP_CYC*PPN_PREP_CYC))
     APRUN="mpiexec -n ${ncores} -ppn ${PPN_PREP_CYC}"
+    ;;
+  "URSA")
+    ncores=$(( NNODES_PREP_CYC*PPN_PREP_CYC))
+    APRUN="srun --export=ALL -n ${ncores} --ntasks-per-node=${PPN_PREP_CYC}"
     ;;
 
   "HERA")
@@ -312,6 +321,8 @@ else
     done
     ncatted -O -a source,global,c,c,'FV3GFS GAUSSIAN NETCDF FILE' fv_core.res.tile1.nc
   else
+    #set ops email header for instances of missing restart files.
+    opsemailhead="WARNING: Missing RRFS restart files listed below. Proceeding with older restart files.\n\nOps Action: No immediate action. If this warning email continues for subsequent cycles, investigate cause of system slow down.\n\n"
 
   # Setup the INPUT directory for warm start cycles, which can be spin-up cycle or product cycle.
   #
@@ -329,7 +340,7 @@ else
   #   So the defination of restart_prefix needs a "." at the end.
   #
   if [ "${CYCLE_SUBTYPE}" = "spinup" ] ; then
-    restart_prefix="${YYYYMMDD}.${HH}00${DT_ATMOS}."
+    restart_prefix="${YYYYMMDD}.${HH}${dt_mmss}."
   else
     restart_prefix="${YYYYMMDD}.${HH}0000."
   fi
@@ -379,7 +390,7 @@ else
       if [ ${fallback_enable} == "YES" ]; then
         print_info_msg "$VERBOSE" "WARNING: cannot find restart files in previous 1 hour, proceeding fallback for older cycle"
         if [ ${SENDMAIL} == "YES" ] && [ ! ${WGF} == "enkf" ]; then
-          echo "WARNING: cannot find restart files in previous 1 hour, proceeding fallback for older cycle" | mail.py -s "RRFS prep_cyc fallback" -c ${MAILTO}
+          (echo -e ${opsemailhead} && echo "WARNING: cannot find restart files in previous 1 hour, proceeding fallback for older cycle") | mail.py -s "RRFS prep_cyc fallback" -c ${MAILTO}
         fi
         fg_restart_dirname=forecast
         restart_prefix="${YYYYMMDD}.${HH}0000."
@@ -406,7 +417,7 @@ else
            else
              print_info_msg "$VERBOSE" "WARNING: fallback cannot find restart files in previous ${n} hour"
              if [ ${SENDMAIL} == "YES" ] && [ ! ${WGF} == "enkf" ]; then
-               echo "WARNING: fallback cannot find restart files in previous ${n} hour" | mail.py -s "RRFS prep_cyc fallback" -c ${MAILTO}
+               (echo -e ${opsemailhead} && echo "WARNING: fallback cannot find restart files in previous ${n} hour") | mail.py -s "RRFS prep_cyc fallback" -c ${MAILTO}
              fi
              export missing_restart_file=${checkfile}
              export missing_restart_bkpath=${bkpath}
@@ -426,7 +437,7 @@ else
     else
       mkdir -p ${umbrella_prep_cyc_fallback}
     fi
-    if [ ! -z ${fallback_enable} ] && [ ${fallback_enable} == "YES" ];then
+    if [ ! -z ${fallback_enable} ] && [ ${fallback_enable} == "YES" ]; then
       # Output status in the flag file if the restart file not found
       flock -w 60 "${umbrella_prep_cyc_fallback}/file.lock" -c 'echo "WARNING: rrfs prep cycle member ${mem_num} in cycle ${cyc} cannot find restart files ${missing_restart_file} in previous 1 hour, it is degraded proceeding fallback in ${missing_restart_bkpath}, check rrfs enkf forecast job jrrfs_enkf_save_restart_${mem_num}_f1 from previous cycle for possible issue." >> "${umbrella_prep_cyc_fallback_flag}"'
       # Start alert action if all 30 member has registered its status and at least one member has issue
@@ -442,7 +453,7 @@ else
           exec 9> "${umbrella_prep_cyc_fallback}/email.lock"
           flock -x 9
           if [ ! -s ${umbrella_prep_cyc_fallback}/email.lock ]; then
-            mail.py -s "RRFS prep_cyc fallback" -c ${MAILTO} < ${umbrella_prep_cyc_fallback_flag}
+            (echo -e $opsemailhead && cat ${umbrella_prep_cyc_fallback_flag}) | mail.py -s "RRFS prep_cyc fallback" -c ${MAILTO}
             echo "Sent ${mem_num}" >> "${umbrella_prep_cyc_fallback}/email.lock"
           fi
           exec 9>&-
@@ -475,7 +486,13 @@ else
     done
 
     cpprocs=5
-    mpiexec -n ${cpprocs} -ppn ${cpprocs} --cpu-bind core cfp ./para_copy.sh
+    # cfp only exists on WCOSS2, so run the copies ${cpprocs} at a time with xargs on other machines;
+    # one at a time, the ~280 GB of deterministic restarts overran the 20-minute job on Ursa
+    if [ "${MACHINE}" = "WCOSS2" ]; then
+      mpiexec -n ${cpprocs} -ppn ${cpprocs} --cpu-bind core cfp ./para_copy.sh
+    else
+      xargs -P ${cpprocs} -I{} bash -c {} < ./para_copy.sh
+    fi
     ctrl_bkpath=${bkpath}/../INPUT
     cpreq -p ${ctrl_bkpath}/gfs_ctrl.nc  gfs_ctrl.nc
 

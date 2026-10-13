@@ -125,6 +125,17 @@ case "${extrn_mdl_name}" in
   "RRFS")
     sysdir="${COMIN}/rrfs.${yyyymmdd}/${hh}"
     fns_on_disk=( "rrfs.t${hh}z.natlev.3km.f0${fcst_hh}.na.grib2" )
+    # Ursa, coarser domains (strip when merging to the nco branch): fire weather takes its initial
+    # conditions from the parent deterministic post, whose products carry that domain's own grid
+    # spacing and name rather than the NA ones. This task runs as the 1.5 km fire weather grid, so
+    # the parent domain is not in its environment; take whichever natlev file the parent wrote.
+    if [ "${MACHINE}" = "URSA" ] && [ ! -e "${sysdir}/${fns_on_disk[0]}" ]; then
+      fn_parent=$( ls -1 ${sysdir}/rrfs.t${hh}z.natlev.*.f0${fcst_hh}.*.grib2 2>/dev/null | head -1 )
+      if [ -n "${fn_parent}" ]; then
+        fns_on_disk=( "$( basename ${fn_parent} )" )
+        print_info_msg "Fire weather ICs: using the parent post file ${fns_on_disk[0]}"
+      fi
+    fi
     ;;
 
   *)
@@ -158,6 +169,14 @@ case "$MACHINE" in
     APRUN="mpiexec -n ${ncores} -ppn ${PPN_MAKE_ICS} --cpu-bind core --depth ${OMP_NUM_THREADS}"
     ncores_blending=$(( NNODES_MAKE_ICS*PPN_PRE_BLENDING ))
     APRUN_PRE_BLENDING="mpiexec -n ${ncores_blending} -ppn ${PPN_PRE_BLENDING} --cpu-bind core --depth 2"
+    ;;
+  "URSA")
+    export OMP_STACKSIZE=1G
+    export OMP_NUM_THREADS=${TPP_MAKE_ICS}
+    ncores=$(( NNODES_MAKE_ICS*PPN_MAKE_ICS ))
+    APRUN="srun --export=ALL -n ${ncores} --ntasks-per-node=${PPN_MAKE_ICS} --cpus-per-task=${OMP_NUM_THREADS}"
+    ncores_blending=$(( NNODES_MAKE_ICS*PPN_PRE_BLENDING ))
+    APRUN_PRE_BLENDING="srun --export=ALL -n ${ncores_blending} --ntasks-per-node=${PPN_PRE_BLENDING} --cpus-per-task=2"
     ;;
 
   "HERA")

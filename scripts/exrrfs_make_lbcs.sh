@@ -160,8 +160,21 @@ case "${extrn_mdl_name}" in
     sysdir2=""
     fcst_hhh=( $( printf "%03d " "${lbc_spec_fhrs[@]}" ) )
     prefix="rrfs.t${hh}z.natlev.3km.f"
-    fns=( "${fcst_hhh[@]/#/$prefix}" )
     suffix=".na.grib2"
+    # Ursa, coarser domains (strip when merging to the nco branch): fire weather takes its boundaries
+    # from the parent deterministic post, whose products carry that domain's own grid spacing and
+    # name rather than the NA ones. This task runs as the 1.5 km fire weather grid, so the parent
+    # domain is not in its environment; read the spacing and name off a file the parent wrote.
+    if [ "${MACHINE}" = "URSA" ] && [ ! -e "${sysdir}/${prefix}${fcst_hhh[0]}${suffix}" ]; then
+      fn_parent=$( ls -1 ${sysdir}/rrfs.t${hh}z.natlev.*.f???.*.grib2 2>/dev/null | head -1 )
+      if [ -n "${fn_parent}" ]; then
+        fn_parent=$( basename "${fn_parent}" )
+        prefix="${fn_parent%%.f[0-9][0-9][0-9].*}.f"
+        suffix=".${fn_parent##*.f[0-9][0-9][0-9].}"
+        print_info_msg "Fire weather LBCs: using the parent post naming ${prefix}NNN${suffix}"
+      fi
+    fi
+    fns=( "${fcst_hhh[@]/#/$prefix}" )
     fns_on_disk=( "${fns[@]/%/$suffix}" )
     ;;
 
@@ -195,6 +208,12 @@ case "$MACHINE" in
     export OMP_NUM_THREADS=${TPP_MAKE_LBCS}
     ncores=$(( NNODES_MAKE_LBCS*PPN_MAKE_LBCS ))
     APRUN="mpiexec -n ${ncores} -ppn ${PPN_MAKE_LBCS} --cpu-bind core --depth ${OMP_NUM_THREADS}"
+    ;;
+  "URSA")
+    export OMP_STACKSIZE=1G
+    export OMP_NUM_THREADS=${TPP_MAKE_LBCS}
+    ncores=$(( NNODES_MAKE_LBCS*PPN_MAKE_LBCS ))
+    APRUN="srun --export=ALL -n ${ncores} --ntasks-per-node=${PPN_MAKE_LBCS} --cpus-per-task=${OMP_NUM_THREADS}"
     ;;
 
   "HERA")
@@ -352,7 +371,12 @@ if [ ${extrn_mdl_name} != GEFS ] ; then
    if [ -s ${DATA}/parallel_copy.sh ]; then
       poe_script=parallel_copy.sh
       export MP_CMDFILE=${poe_script}
-      launcher="mpiexec -np ${ncores} --cpu-bind core cfp"
+      # cfp only exists on WCOSS2, so run the copies serially on other machines
+      if [ "${MACHINE}" = "WCOSS2" ]; then
+        launcher="mpiexec -np ${ncores} --cpu-bind core cfp"
+      else
+        launcher="bash"
+      fi
       $launcher $MP_CMDFILE
       export err=$?; err_chk
       ecflow_client --event release_${WGF}_make_lbcs

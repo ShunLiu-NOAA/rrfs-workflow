@@ -3,6 +3,11 @@ set -x
 
 source ${FIXrrfs}/workflow/${WGF}/workflow.conf
 
+# The restart written one time step after initialization is named by its valid time, so DT_ATMOS
+# has to carry into minutes: "00${DT_ATMOS}" is only correct while the step is under 60 s. Gives
+# 0036 for the 36 s NA step, exactly as before, and 0115 for a 75 s step rather than an invalid 0075.
+dt_mmss=$( printf "%02d%02d" $(( ${DT_ATMOS:-36} / 60 )) $(( ${DT_ATMOS:-36} % 60 )) )
+
 #
 #-----------------------------------------------------------------------
 #
@@ -84,7 +89,7 @@ n_iolayouty=$(($IO_LAYOUT_Y-1))
 list_iolayout=$(seq 0 $n_iolayouty)
 
 if [ "${CYCLE_SUBTYPE}" = "ensinit" ]; then
-  restart_prefix=${save_yyyy}${save_mm}${save_dd}.${save_hh}00${DT_ATMOS}
+  restart_prefix=${save_yyyy}${save_mm}${save_dd}.${save_hh}${dt_mmss}
 else
   restart_prefix=${save_yyyy}${save_mm}${save_dd}.${save_hh}0000
 fi
@@ -106,6 +111,24 @@ if [[ ${copy_gfs_ctrl} = TRUE ]]; then
     cpreq ${umbrella_forecast_data}/INPUT/gfs_ctrl.nc ${COMOUT}/INPUT
     if_save_input=TRUE
   fi
+fi
+
+# Ursa (strip when merging to the nco branch): the forecast writes this hour's restart files one at
+# a time, and a retro rerun can start this job before any of them land, so the check below would
+# miss a restart that is seconds away. Wait for the whole set when this hour is due one.
+if [ "${MACHINE}" = "URSA" ] && [[ " ${RESTART_HRS:-} " == *" $((10#${fhr})) "* ]]; then
+  restart_source_files="phy_data.nc fv_tracer.res.tile1.nc fv_core.res.tile1.nc fv_diag.res.tile1.nc sfc_data.nc fv_srf_wnd.res.tile1.nc fv_core.res.nc coupler.res"
+  ic=0
+  while [ ${ic} -lt 60 ]; do
+    missing=""
+    for restart_source_file in ${restart_source_files}; do
+      [ -s "${shared_forecast_restart_data}/${restart_prefix}.${restart_source_file}" ] || missing="${missing} ${restart_source_file}"
+    done
+    [ -z "${missing}" ] && break
+    print_info_msg "$VERBOSE" "waiting for restart files:${missing}"
+    ic=$((ic + 1))
+    sleep 15
+  done
 fi
 
 if [ -r "${shared_forecast_restart_data}/${restart_prefix}.coupler.res" ]; then

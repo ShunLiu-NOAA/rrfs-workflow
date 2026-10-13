@@ -127,6 +127,9 @@ case $MACHINE in
   "WCOSS2")
     APRUN="mpiexec -n ${nprocs}"
     ;;
+  "URSA")
+    APRUN="srun --export=ALL -n ${nprocs}"
+    ;;
 
   "HERA")
     APRUN="srun --export=ALL"

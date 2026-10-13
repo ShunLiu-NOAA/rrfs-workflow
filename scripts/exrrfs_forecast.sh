@@ -3,6 +3,11 @@ set -x
 
 source ${FIXrrfs}/workflow/${WGF}/workflow.conf
 
+# The restart written one time step after initialization is named by its valid time, so DT_ATMOS
+# has to carry into minutes: "00${DT_ATMOS}" is only correct while the step is under 60 s. Gives
+# 0036 for the 36 s NA step, exactly as before, and 0115 for a 75 s step rather than an invalid 0075.
+dt_mmss=$( printf "%02d%02d" $(( ${DT_ATMOS:-36} / 60 )) $(( ${DT_ATMOS:-36} % 60 )) )
+
 # def NEED
 export FIXam=${FIXam:-${HOMErrfs}/fix/am}
 export FIXLAM=${FIXLAM:-${HOMErrfs}/fix/lam/RRFS_NA_3km}
@@ -138,6 +143,12 @@ case $MACHINE in
     ;;
 
   "HERA")
+    APRUN="srun --export=ALL --mem=0"
+    ;;
+
+  "URSA")
+    OMP_NUM_THREADS=${TPP_FORECAST}
+    OMP_STACKSIZE=1G
     APRUN="srun --export=ALL --mem=0"
     ;;
 
@@ -694,7 +705,12 @@ fi
 
 PE_RAW=$(( LAYOUT_X*LAYOUT_Y ))
 PE_FCST=$(( ${PE_RAW} + ${WRITE_GRP}*${WRITE_TSK} ))
-APRUN="mpiexec -n ${PE_FCST} -ppn ${PPN_FORECAST} --cpu-bind core --depth ${OMP_NUM_THREADS}"
+if [ "${MACHINE}" = "URSA" ]; then
+  # Launch exactly PE_FCST ranks; FMS aborts if the job has more ranks than the layout uses
+  APRUN="${APRUN} -n ${PE_FCST} --ntasks-per-node=${PPN_FORECAST} --cpus-per-task=${OMP_NUM_THREADS}"
+else
+  APRUN="mpiexec -n ${PE_FCST} -ppn ${PPN_FORECAST} --cpu-bind core --depth ${OMP_NUM_THREADS}"
+fi
 
 #
 #-----------------------------------------------------------------------
@@ -811,7 +827,7 @@ if [ $FCST_LEN_HRS -gt 0 ]; then
     rst_hh="${cdate_restart_hr:8:2}"
     if [ "${CYCLE_SUBTYPE}" = "ensinit" ]; then
       for file_id in "${file_ids[@]}"; do
-        eval $NLN ${shared_forecast_restart_data}/${rst_yyyymmdd}.${rst_hh}00${DT_ATMOS}.${file_id} ${rst_yyyymmdd}.${rst_hh}00${DT_ATMOS}.${file_id}
+        eval $NLN ${shared_forecast_restart_data}/${rst_yyyymmdd}.${rst_hh}${dt_mmss}.${file_id} ${rst_yyyymmdd}.${rst_hh}${dt_mmss}.${file_id}
       done
     else
       for file_id in "${file_ids[@]}"; do
@@ -1025,8 +1041,18 @@ cd INPUT
 acsnow_ct=$(ncdump -h sfc_data.nc|grep acsnow|wc -l)
 if [ $acsnow_ct -eq 0 ] && [ ! ${WGF} = "firewx" ]; then
   echo "Run DATA sfc_data.nc surge for acsnow"
-  ncks -A ${FIXrrfs}/acsnow/acsnow.nc sfc_data.nc
-  export err=$?; err_chk
+  # Ursa, coarser domains (strip when merging to the nco branch): the acsnow fix file is on the
+  # NA 3 km grid, so ncks rejects it on any other domain. Its fields are zeros, so make them here.
+  if [ "${PREDEF_GRID_NAME}" = "RRFS_NA_3km" ]; then
+    ncks -A ${FIXrrfs}/acsnow/acsnow.nc sfc_data.nc
+    export err=$?; err_chk
+  else
+    ncap2 -O -s 'acsnow_land=float(slmsk*0.0); acsnow_ice=float(slmsk*0.0)' sfc_data.nc sfc_data_acsnow.nc
+    export err=$?; err_chk
+    ncatted -a long_name,acsnow_land,d,, -a long_name,acsnow_ice,d,, sfc_data_acsnow.nc
+    export err=$?; err_chk
+    mv sfc_data_acsnow.nc sfc_data.nc
+  fi
 fi
 cd ..
 #

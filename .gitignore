@@ -4,6 +4,8 @@ lib/*
 python_graphics/
 sorc/*/
 !sorc/manage_externals/
+!sorc/_workaround_/
+!sorc/_workaround_/**
 ush/config.sh
 ush/*.swp
 ush/__pycache__/
@@ -17,3 +19,9 @@ __pycache__
 *.swp
 .venv
 *~
+logs/
+
+# Generated suite definitions: regenerate these files instead of committing them.
+ecf/defs/rrfs_ursa.def
+ush/prod_clone/ecf/defs_retro.def
+ecf/defs/ursa_config.sh

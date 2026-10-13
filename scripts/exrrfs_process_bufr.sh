@@ -55,6 +55,10 @@ case $MACHINE in
   APRUN="mpiexec -n 1 -ppn 1"
   ;;
 #
+"URSA")
+  APRUN="srun --export=ALL -n 1"
+  ;;
+#
 "HERA")
   APRUN="srun --export=ALL"
   ;;
@@ -139,7 +143,7 @@ else
 
   case $MACHINE in
 
-  "WCOSS2")
+  "WCOSS2" | "URSA")
 
     obsfileprefix=${obs_source}
     obspath_tmp=${COMINobsproc}/${obs_source}.${YYYYMMDD}

@@ -57,6 +57,11 @@ case $MACHINE in
     ncores=$(( NNODES_PRDGEN*PPN_PRDGEN))
     APRUN="mpiexec -n ${ncores} -ppn ${PPN_PRDGEN}"
     ;;
+  "URSA")
+    export OMP_NUM_THREADS=1
+    ncores=$(( NNODES_PRDGEN*PPN_PRDGEN))
+    APRUN="srun --export=ALL -n ${ncores} --ntasks-per-node=${PPN_PRDGEN}"
+    ;;
 
   "HERA")
     APRUN="srun --export=ALL"
@@ -160,6 +165,12 @@ if [ "${PREDEF_GRID_NAME}" = "RRFS_FIREWX_1.5km" ]; then
 elif [ "${PREDEF_GRID_NAME}" = "RRFS_NA_3km" ]; then
   gridname="na"
   gridspacing="3km"
+# Ursa, coarser domains (strip when merging to the nco branch): a development domain names its own
+# products, via PRDGEN_GRIDNAME and PRDGEN_GRIDSPACING in ecf/defs/domains/<DOMAIN>.sh, so adding a
+# domain needs no change here. Last of the three, so the fire weather and NA grids keep their names.
+elif [ -n "${PRDGEN_GRIDNAME:-}" ]; then
+  gridname="${PRDGEN_GRIDNAME}"
+  gridspacing="${PRDGEN_GRIDSPACING}"
 fi
 #
 net4=$(echo ${NET:0:4} | tr '[:upper:]' '[:lower:]')
@@ -266,6 +277,12 @@ if [ ${WGF} = "det" ] || [ ${WGF} = "ensf" ]; then
   # Create script to execute production generation tasks in parallel using CFP
   tasks=(3 3 1 1)
   domains=(conus ak hi pr)
+  # Ursa, coarser domains (strip when merging to the nco branch): the Alaska, Hawaii and Puerto
+  # Rico products are cut out of the source grid, which a CONUS domain does not cover, so make
+  # only the CONUS ones there.
+  case "${PREDEF_GRID_NAME}" in
+    RRFS_CONUS_*) tasks=(3); domains=(conus) ;;
+  esac
   count=0
   for domain in ${domains[@]}
   do
@@ -279,23 +296,40 @@ if [ ${WGF} = "det" ] || [ ${WGF} = "ensf" ]; then
 # Add 2dfld tasks to the parallel script
   mkdir -p $DATAprdgen/prdgen_conus_4
   echo "$USHrrfs/prdgen/rrfs_prdgen_subpiece.sh $fhr $cyc 4 conus $fld2d ${DATAprdgen} ${COMOUT}" >> $DATAprdgen/poescript_${fhr}
+  # Ursa, coarser domains (strip when merging to the nco branch): same as above, the Alaska,
+  # Hawaii and Puerto Rico 2dfld pieces are outside a CONUS domain
+  case "${PREDEF_GRID_NAME}" in
+    RRFS_CONUS_*) ;;
+    *)
   mkdir -p $DATAprdgen/prdgen_ak_4
   echo "$USHrrfs/prdgen/rrfs_prdgen_subpiece.sh $fhr $cyc 4 ak $fld2d ${DATAprdgen} ${COMOUT}" >> $DATAprdgen/poescript_${fhr}
   mkdir -p $DATAprdgen/prdgen_hi_2
   echo "$USHrrfs/prdgen/rrfs_prdgen_subpiece.sh $fhr $cyc 2 hi $fld2d ${DATAprdgen} ${COMOUT}" >> $DATAprdgen/poescript_${fhr}
   mkdir -p $DATAprdgen/prdgen_pr_2
   echo "$USHrrfs/prdgen/rrfs_prdgen_subpiece.sh $fhr $cyc 2 pr $fld2d ${DATAprdgen} ${COMOUT}" >> $DATAprdgen/poescript_${fhr}
+      ;;
+  esac
 
   chmod 775 $DATAprdgen/poescript_${fhr}
 
   # Execute the script
-  export CMDFILE=$DATAprdgen/poescript_${fhr} 
-  mpiexec -np 12 --cpu-bind core cfp $CMDFILE >>$pgmout 2>errfile
+  export CMDFILE=$DATAprdgen/poescript_${fhr}
+  # cfp only exists on WCOSS2, so run the subpieces serially on other machines
+  if [ "${MACHINE}" = "WCOSS2" ]; then
+    mpiexec -np 12 --cpu-bind core cfp $CMDFILE >>$pgmout 2>errfile
+  else
+    bash $CMDFILE >>$pgmout 2>errfile
+  fi
   export err=$?; err_chk
 
   # reassemble the CONUS and Alaska prslev output grids and send to COM
   tasks=(3 3)
   domains=(conus ak)
+  # Ursa, coarser domains (strip when merging to the nco branch): only the CONUS pieces were
+  # made above, so only they can be reassembled here.
+  case "${PREDEF_GRID_NAME}" in
+    RRFS_CONUS_*) tasks=(3); domains=(conus) ;;
+  esac
   count=0
   for domain in ${domains[@]}
   do
@@ -341,6 +375,11 @@ if [ ${WGF} = "det" ] || [ ${WGF} = "ensf" ]; then
 
   # Send Hawaii/Puerto Rico prslev output to COM
   domains=(hi pr)
+  # Ursa, coarser domains (strip when merging to the nco branch): no Hawaii or Puerto Rico
+  # pieces exist on a CONUS domain.
+  case "${PREDEF_GRID_NAME}" in
+    RRFS_CONUS_*) domains=() ;;
+  esac
   for domain in ${domains[@]}
   do
     DBNDOM="${domain^^}"
@@ -374,11 +413,18 @@ if [ ${WGF} = "det" ] || [ ${WGF} = "ensf" ]; then
 
   # Send 2dfld output (all domains) to COM
   domains=(conus ak hi pr)
+  # Ursa, coarser domains (strip when merging to the nco branch): only the CONUS 2dfld piece
+  # is made on a CONUS domain.
+  case "${PREDEF_GRID_NAME}" in
+    RRFS_CONUS_*) domains=(conus) ;;
+  esac
   for domain in ${domains[@]}
   do
     DBNDOM="${domain^^}"
     if [[ $domain = "conus" || $domain = "ak" ]]; then
-      outspacing="3km"
+      # Ursa, coarser domains (strip when merging to the nco branch): the grid spacing is in the
+      # product names; it is 3km only on the NA and CONUS 3 km grids
+      outspacing="${gridspacing}"
       task="4"
     elif [[ $domain = "hi" || $domain = "pr" ]]; then
       outspacing="2p5km"
@@ -501,9 +547,65 @@ if [ ${WGF} = "det" ] || [ ${WGF} = "ensf" ]; then
 
   fi
 
+  # extract subset of ensemble files for NOMADS
+  if [ ${DO_ENSFCST} = "TRUE" ]; then
+    for domain in ${domains[@]}
+    do
+      DBNDOM="${domain^^}"
+
+      if [[ $domain = "conus" || $domain = "ak" ]]; then
+        # Ursa, coarser domains (strip when merging to the nco branch): as above, the NOMADS
+        # products this reads were written with the domain's own spacing
+        outspacing="${gridspacing}"
+      elif [[  $domain = "hi" || $domain = "pr" ]]; then
+        outspacing=2p5km
+      fi
+
+      fld2d_loc=${COMOUT}/${net4}.t${cyc}z.${mem_num}.2dfld.${outspacing}.f${fhr}.${domain}.grib2
+      prslev_loc=${COMOUT}/${net4}.t${cyc}z.${mem_num}.prslev.${outspacing}.f${fhr}.${domain}.grib2
+      fld2d_nomads=${net4}.t${cyc}z.${mem_num}.2dfldnomads.${outspacing}.f${fhr}.${domain}.grib2
+      prslev_nomads=${net4}.t${cyc}z.${mem_num}.prslevnomads.${outspacing}.f${fhr}.${domain}.grib2
+
+      wgrib2 ${fld2d_loc} | grep -F -f ${FIX_UPP}/nomadsensf_fields_2dfld.txt | wgrib2 -i -grib ${DATA}/${fld2d_nomads} ${fld2d_loc} >>$pgmout 2>>errfile
+      export err=$?; err_chk
+
+      cpreq ${DATA}/${fld2d_nomads} ${COMOUT}/${fld2d_nomads}
+
+      wgrib2 ${prslev_loc} -match "(HGT|PRES|TMP|RH|DPT|VVEL|ABSV|CLWMR|UGRD|VGRD|SPFH)" \
+        -match "(1000 mb:|975 mb:|950 mb:|925 mb:|900 mb:|850 mb:|800 mb:|750 mb:|700 mb:|600 mb:|500 mb:|400 mb:|300 mb:|250 mb:)" \
+        -grib ${DATA}/${prslev_nomads} >>$pgmout 2>>errfile
+      export err=$?; err_chk
+
+      cpreq ${DATA}/${prslev_nomads} ${COMOUT}/${prslev_nomads}
+
+      # index files
+      if [ -s ${COMOUT}/${fld2d_nomads} ]; then
+        wgrib2 ${COMOUT}/${fld2d_nomads} -s > ${COMOUT}/${fld2d_nomads}.idx
+      fi
+      if [ -s ${COMOUT}/${prslev_nomads} ]; then
+        wgrib2 ${COMOUT}/${prslev_nomads} -s > ${COMOUT}/${prslev_nomads}.idx
+      fi
+
+      if [ "${SENDDBN}" = "YES" ] ; then
+        $DBNROOT/bin/dbn_alert MODEL RRFS_ENS_NOMADS_${DBNDOM} $job \
+            ${COMOUT}/rrfs.t${cyc}z.${mem_num}.prslevnomads.${outspacing}.f${fhr}.${domain}.grib2
+        $DBNROOT/bin/dbn_alert MODEL RRFS_ENS_NOMADS_${DBNDOM}_IDX $job \
+            ${COMOUT}/rrfs.t${cyc}z.${mem_num}.prslevnomads.${outspacing}.f${fhr}.${domain}.grib2.idx
+        $DBNROOT/bin/dbn_alert MODEL RRFS_ENS_2DFLD_NOMADS_${DBNDOM} $job \
+            ${COMOUT}/rrfs.t${cyc}z.${mem_num}.2dfldnomads.${outspacing}.f${fhr}.${domain}.grib2
+        $DBNROOT/bin/dbn_alert MODEL RRFS_ENS_2DFLD_NOMADS_${DBNDOM}_IDX $job \
+            ${COMOUT}/rrfs.t${cyc}z.${mem_num}.2dfldnomads.${outspacing}.f${fhr}.${domain}.grib2.idx
+      fi
+    done
+  fi
+
   # create prslev and 2dfld files on 13-km North America grid
   # Deterministic cycles only for now
-  if [ ${DO_ENSFCST} = "FALSE" ]; then
+  # Ursa, coarser domains (strip when merging to the nco branch): this downscales the NA 3 km
+  # output onto a fixed 13 km North America grid, so it has nothing to do on a CONUS domain
+  na13km="TRUE"
+  case "${PREDEF_GRID_NAME}" in RRFS_CONUS_*) na13km="FALSE" ;; esac
+  if [ ${DO_ENSFCST} = "FALSE" ] && [ ${na13km} = "TRUE" ]; then
     prslev_na_13km=${net4}.t${cyc}z.prslev.13km.f${fhr}.na.grib2
     fld2d_na_13km=${net4}.t${cyc}z.2dfld.13km.f${fhr}.na.grib2
 
@@ -551,7 +653,9 @@ if [ ${WGF} = "det" ] || [ ${WGF} = "ensf" ]; then
   #-- 00/06/12/18Z deterministic cycles only
   #-- Use 2dfld for 3-km grid and prslev for 13-km grid
   #-- AWIPS/wmo products are not generated for ensemble member forecasts
-  if [ ${DO_ENSFCST} = "FALSE" ]; then
+  # Ursa, coarser domains (strip when merging to the nco branch): rrfs_mkawp.sh names every file
+  # ".na." and accepts only 3km or 13km NA grid spacings, so it has nothing to do on a CONUS domain
+  if [ ${DO_ENSFCST} = "FALSE" ] && [ ${na13km} = "TRUE" ]; then
     if [ $cyc -eq 00 ] || [ $cyc -eq 06 ] || [ $cyc -eq 12 ] || [ $cyc -eq 18 ]; then
       grids=(3km 13km)
       for grid in ${grids[@]}
@@ -568,7 +672,9 @@ if [ ${WGF} = "det" ] || [ ${WGF} = "ensf" ]; then
   #-- Generate RAP smoke and HYSPLIT dust products for RRFS
   #-- 06Z and 12Z deterministic cycles only
   #-- Smoke/dust products are not generated for ensemble member forecasts
-  if [ ${DO_ENSFCST} = "FALSE" ]; then
+  # Ursa, coarser domains (strip when merging to the nco branch): skip them when the domain runs
+  # without smoke/dust (DO_SMOKE_DUST=FALSE), else the f072 combine waits on files never written.
+  if [ ${DO_ENSFCST} = "FALSE" ] && [ "${DO_SMOKE_DUST:-TRUE}" = "TRUE" ]; then
     if [ $cyc -eq 06 ] || [ $cyc -eq 12 ]; then
       if (( 10#$fhr <= 72 )); then
         $USHrrfs/prdgen/rrfs_smokedust.sh $fhr 227

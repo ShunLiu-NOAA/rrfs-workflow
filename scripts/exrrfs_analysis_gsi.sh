@@ -78,6 +78,13 @@ case $MACHINE in
   APRUN="mpiexec -n ${ncores} -ppn ${PPN_ANALYSIS_GSI} --cpu-bind core --depth ${OMP_NUM_THREADS}"
   ;;
 #
+"URSA")
+  export OMP_STACKSIZE=500M
+  export OMP_NUM_THREADS=${TPP_ANALYSIS_GSI}
+  ncores=$(( NNODES_ANALYSIS_GSI*PPN_ANALYSIS_GSI))
+  APRUN="srun --export=ALL -n ${ncores} --ntasks-per-node=${PPN_ANALYSIS_GSI} --cpus-per-task=${OMP_NUM_THREADS}"
+  ;;
+#
 "HERA")
   export OMP_NUM_THREADS=${TPP_ANALYSIS_GSI}
   export OMP_STACKSIZE=300M
@@ -238,7 +245,12 @@ if  [[ ${regional_ensemble_option:-1} -eq 5 ]]; then
   else
     poe_script=parallel_copy.sh
     export MP_CMDFILE=${poe_script}
-    launcher="time mpiexec -np ${ncores} -ppn ${PPN_ANALYSIS_GSI} --cpu-bind core cfp"
+    # cfp only exists on WCOSS2, so run the copies serially on other machines
+    if [ "${MACHINE}" = "WCOSS2" ]; then
+      launcher="time mpiexec -np ${ncores} -ppn ${PPN_ANALYSIS_GSI} --cpu-bind core cfp"
+    else
+      launcher="time bash"
+    fi
     $launcher $MP_CMDFILE
     export err=$?; err_chk
   fi
@@ -257,7 +269,7 @@ if  [[ ${regional_ensemble_option:-1} -eq 1 || ${l_both_fv3sar_gfs_ens} = ".true
 
   case $MACHINE in
 
-  "WCOSS2")
+  "WCOSS2" | "URSA")
 
     for loop in $loops; do
       shopt -s nullglob
@@ -269,8 +281,8 @@ if  [[ ${regional_ensemble_option:-1} -eq 1 || ${l_both_fv3sar_gfs_ens} = ".true
 
       else
       for timelist in "${file_list[@]}"; do
-        availtimeyyyymmdd=$(echo ${timelist} | cut -d'/' -f9 | cut -c 10-17)
-        availtimehh=$(echo ${timelist} | cut -d'/' -f10)
+        availtimeyyyymmdd=$(basename $(dirname $(dirname $(dirname $(dirname ${timelist})))) | cut -d'.' -f2)   # enkfgdas.YYYYMMDD
+        availtimehh=$(basename $(dirname $(dirname $(dirname ${timelist}))))                                     # HH
         availtime=${availtimeyyyymmdd}${availtimehh}
 
         loopfcst=$(echo ${loop}| cut -c 1-3)      # for nemsio 009s to get 009
@@ -298,7 +310,7 @@ if  [[ ${regional_ensemble_option:-1} -eq 1 || ${l_both_fv3sar_gfs_ens} = ".true
     fi
 
     ;;
-  "JET" | "HERA" | "ORION" | "HERCULES" )
+  "JET" | "HERA" | "ORION" | "HERCULES")
 
     for loop in $loops; do
       for timelist in $(ls ${COMINgfs}/*.gdas.t*z.atmf${loop}.mem080.${ftype}); do
@@ -469,7 +481,7 @@ else
 
   case $MACHINE in
 
-  "WCOSS2")
+  "WCOSS2" | "URSA")
      obsfileprefix=${obs_source}
      obspath_tmp=${COMINobsproc}/${obs_source}.${YYYYMMDD}
     ;;
@@ -1185,7 +1197,12 @@ for file in $filelist; do
   fi
 done
 cd ${shared_output_data}
-launcher="time mpiexec -np ${ncores} -ppn ${PPN_ANALYSIS_GSI} --cpu-bind core cfp"
+# cfp only exists on WCOSS2, so run the copies serially on other machines
+if [ "${MACHINE}" = "WCOSS2" ]; then
+  launcher="time mpiexec -np ${ncores} -ppn ${PPN_ANALYSIS_GSI} --cpu-bind core cfp"
+else
+  launcher="time bash"
+fi
 ${launcher} ${shared_output_data}/copy_shared_file.sh
 export err=$?; err_chk
 #

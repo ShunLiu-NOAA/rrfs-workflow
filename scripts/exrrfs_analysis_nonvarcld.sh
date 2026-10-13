@@ -56,6 +56,11 @@ case $MACHINE in
   APRUN="mpiexec -n ${ncores} -ppn ${PPN_ANALYSIS_NONVARCLD}"
   ;;
 #
+"URSA")
+  ncores=$(( NNODES_ANALYSIS_NONVARCLD*PPN_ANALYSIS_NONVARCLD ))
+  APRUN="srun --export=ALL -n ${ncores} --ntasks-per-node=${PPN_ANALYSIS_NONVARCLD}"
+  ;;
+#
 "HERA")
   APRUN="srun --export=ALL"
   ;;
