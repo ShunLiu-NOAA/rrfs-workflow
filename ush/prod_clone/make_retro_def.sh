@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Make an Ursa retro copy of the prod_clone suite (ecf/defs.def). The upstream mirror tasks become
+# Make a retro copy of the prod_clone suite (ecf/defs.def). The upstream mirror tasks become
 # ecflow dummy tasks (never submitted), and jupdateprodclonestatuses is replaced by jretroprodclone,
 # which completes them from staged files and steps the RRFS suite through the retro period.
 #
@@ -12,23 +12,30 @@ set -eu
 clone_dir=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 out_def=${1:-${clone_dir}/ecf/defs_retro.def}
 
-# Settings live in ecf/defs/ursa_config.sh; environment variables still win.
+# Settings live in ecf/defs/retro/config.sh; environment variables still win.
 PACKAGEHOME=${PACKAGEHOME:-$(cd "${clone_dir}/../.." && pwd)}
 # shellcheck source=/dev/null
-if [ ! -f "${PACKAGEHOME}/ecf/defs/ursa_config.sh" ]; then
-  echo "ecf/defs/ursa_config.sh not found." >&2
-  echo "Link or copy the sample for your domain, e.g." >&2
-  echo "  ln -s ursa_config_na3km.sh ecf/defs/ursa_config.sh" >&2
-  exit 1
+. "${PACKAGEHOME}/ecf/defs/retro/load_config.sh"
+
+# On the first retro day the driver completes the cycles that would warm start from restarts
+# nothing has produced yet, up to the first cycle with a cold start behind it. That is 09z in
+# operations, where the spin-up cycles run from 03z; with them off (DO_SPINUP=FALSE) the
+# deterministic chain cold starts at DET_COLD_START_HRS instead.
+det_cold=9
+if [ "${DO_SPINUP:-TRUE}" = "FALSE" ]; then
+  det_cold=$(echo "${DET_COLD_START_HRS:-03 15}" | awk '{print $1 + 0}')
 fi
-. "${PACKAGEHOME}/ecf/defs/ursa_config.sh"
 
 awk -v q="'" -v ph="${PACKAGEHOME}" -v eh="${ECF_HOME}" -v com="${RETRO_DATA_ROOT}/com" \
-    -v start="${RETRO_START}" -v end="${RETRO_END}" -v suite="${RRFS_SUITE}" -v ev="${ECFLOW_VER}" '
+    -v start="${RETRO_START}" -v end="${RETRO_END}" -v suite="${RRFS_SUITE}" -v ev="${ECFLOW_VER}" \
+    -v det_cold="${det_cold}" '
   function ed(name, value) { print "  edit " name " " q value q }
   $1 == "suite" {
     print
     ed("ECF_HOME", eh)
+    # job logs next to the job files; the NCO dev ecflow servers set ECF_OUT to ~/ecflow, where the
+    # per-family log directories do not exist, so no job could write its output
+    ed("ECF_OUT", eh)
     ed("PACKAGEHOME", ph)
     ed("ECF_FILES", ph "/ush/prod_clone/ecf")
     ed("ENVIR", "prod")
@@ -39,6 +46,7 @@ awk -v q="'" -v ph="${PACKAGEHOME}" -v eh="${ECF_HOME}" -v com="${RETRO_DATA_ROO
     ed("RETRO_END", end)
     ed("RRFS_SUITE", suite)
     ed("ALWAYS_COMPLETE", "nosofs")
+    ed("DET_COLD_HR", det_cold)
     print ""
     # the poller runs on the ecflow host every minute; submitting it through Slurm would be 1440 jobs a day
     print "  task jretroprodclone"

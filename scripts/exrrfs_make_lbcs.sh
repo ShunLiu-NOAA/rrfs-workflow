@@ -161,11 +161,11 @@ case "${extrn_mdl_name}" in
     fcst_hhh=( $( printf "%03d " "${lbc_spec_fhrs[@]}" ) )
     prefix="rrfs.t${hh}z.natlev.3km.f"
     suffix=".na.grib2"
-    # Ursa, coarser domains (strip when merging to the nco branch): fire weather takes its boundaries
+    # Coarser domains (strip when merging to the nco branch): fire weather takes its boundaries
     # from the parent deterministic post, whose products carry that domain's own grid spacing and
     # name rather than the NA ones. This task runs as the 1.5 km fire weather grid, so the parent
     # domain is not in its environment; read the spacing and name off a file the parent wrote.
-    if [ "${MACHINE}" = "URSA" ] && [ ! -e "${sysdir}/${prefix}${fcst_hhh[0]}${suffix}" ]; then
+    if [ "${RETRO:-NO}" = "YES" ] && [ ! -e "${sysdir}/${prefix}${fcst_hhh[0]}${suffix}" ]; then
       fn_parent=$( ls -1 ${sysdir}/rrfs.t${hh}z.natlev.*.f???.*.grib2 2>/dev/null | head -1 )
       if [ -n "${fn_parent}" ]; then
         fn_parent=$( basename "${fn_parent}" )
@@ -386,8 +386,11 @@ if [ ${extrn_mdl_name} != GEFS ] ; then
      # case for firewx
      t_file_ct=36
    else
-     # case for det
-     t_file_ct=97
+     # case for det: one file per boundary hour, which is what the first group staged. The count
+     # follows BOUNDARY_LEN and LBC_SPEC_INTVL_HRS, and is 97 for the operational 96 h at 1 h; a
+     # run that shortens the boundaries has a shorter list, and a fixed count would abort every
+     # group but the first.
+     t_file_ct=${#extrn_mdl_fps_on_disk[@]}
    fi
    if [ $(ls ${umbrella_lbcops_data} |grep -v cptmp| wc -l) -lt ${t_file_ct} ]; then
        err_exit "\
