@@ -1085,8 +1085,8 @@ fi
 
 # Ensure acsnow is in sfc_data.nc
 cd INPUT
-#ncatted -a checksum,T,d,, fv_core.res.tile1.nc
-    # remove checksum from restart files. Checksum will cause trouble if model initializes from blended ics
+    # remove checksum from restart files. Checksum will cause trouble after JEDI-GETKF analysis
+    # need to revisit here and find the exact reason why remove checksum here
     filelistn="fv_core.res.nc fv_core.res.tile1.nc fv_srf_wnd.res.tile1.nc fv_tracer.res.tile1.nc phy_data.nc sfc_data.nc"
 
     for file in ${filelistn}; do
