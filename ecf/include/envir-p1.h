@@ -1,6 +1,8 @@
 # envir-p1.h
-export job=${job:-${PBS_JOBNAME:-$SLURM_JOB_NAME}}
-export jobid=${jobid:-$job.${PBS_JOBID:-$SLURM_JOB_ID}}
+#export job=${job:-${PBS_JOBNAME:-$SLURM_JOB_NAME}}
+#export jobid=${jobid:-$job.${PBS_JOBID:-$SLURM_JOB_ID}}
+export job=${job:-$PBS_JOBNAME}
+export jobid=${jobid:-$job.$PBS_JOBID}
 
 export RUN_ENVIR=nco
 export envir=%ENVIR%
@@ -29,7 +31,8 @@ if [[ ! " prod para test " =~ " ${envir} " && " ops.prod ops.para " =~ " $(whoam
 PTMP=%DEV_PTMP:/lfs/h3/emc/lam/noscrub/ecflow/ptmp%
 model=rrfs
 PSLOT=ecflow_rrfs
-export COMROOT=${PTMP}/${USER}/${PSLOT}/%RRFS_SUITE:para%/com
+#export COMROOT=${PTMP}/${USER}/${PSLOT}/%RRFS_SUITE:para%/com
+export COMROOT=${PTMP}/com
 # DEV_COMPATH adds upstream COM directories to search, e.g. staged retro data on Ursa
 DEV_COMPATH="%DEV_COMPATH:%"
 export COMPATH=${COMROOT}/${model}${DEV_COMPATH:+:${DEV_COMPATH}}
@@ -50,4 +53,3 @@ export DATAROOT=%DEV_DATAROOT:/lfs/h3/emc/lam/noscrub/ecflow/stmp/${USER}/${mode
 #  export umbrella_init_data="${DATAROOT}/${PDY}/${RUN}_init_${cyc}_${rrfs_ver}/${WGF}"
 #fi
 mkdir -p ${DATAROOT} # ${COMrrfs}
-

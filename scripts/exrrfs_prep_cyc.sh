@@ -1042,6 +1042,7 @@ fi
 #
 #-----------------------------------------------------------------------
 #
+export DA_SYSTEM_ENKF=JEDI
 if [ ${WGF} = "enkf" ] && [ "${DA_SYSTEM_ENKF:-GSI}" = "JEDI" ] && [ -f ${DATA}/phy_data.nc ]; then
   ncks -O -v ref_f3d ${DATA}/phy_data.nc ${DATA}/phy_data.nc_prepdbz
   python ${USHrrfs}/prep_phydata_dbz.py ${DATA}/phy_data.nc_prepdbz

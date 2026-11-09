@@ -171,6 +171,11 @@ copy_obs_file nexrad  l2rwbufr
 #
 #-----------------------------------------------------------------------
 #
+if [ "${MACHINE}" = "WCOSS2" ]; then
+  module reset
+  module use "${RDASAPP_DIR}/modulefiles"
+  module load RDAS/wcoss2.intel
+fi
 export LD_LIBRARY_PATH="${RDASAPP_DIR}/build/lib64:${LD_LIBRARY_PATH}"
 
 export pgm="bufr2ioda.x"
