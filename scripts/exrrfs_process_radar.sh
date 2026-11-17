@@ -9,8 +9,7 @@ export FIX_GSI="${FIXrrfs}/gsi"
 #export OBSPATH_NSSLMOSIAC="${DCOMROOT}/ldmdata/obs/upperair/mrms/conus/MergedReflectivityQC"
 export OBSPATH_NSSLMOSIAC="/lfs/h2/emc/lam/noscrub/samuel.degelia/RRFS_RETRO_DATA_NCO/dcom/ldmdata/obs/upperair/mrms/conus/MergedReflectivityQC"
 export RDASAPP_DIR="${RDASAPP_DIR:-${HOMErrfs}/sorc/RDASApp}"
-export DO_IODA_MRMS=${DO_IODA_MRMS:-"TRUE"}
-export DO_IODA_MRMS="TRUE"
+export DO_IODA_MRMS=${DO_IODA_MRMS:-"FALSE"}
 
 #
 #-----------------------------------------------------------------------
